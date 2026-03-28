@@ -6,6 +6,7 @@ import "./QFMath.sol";
 interface IStreamVault {
     function updateStream(address recipient, uint256 newRate) external;
     function token() external view returns (address);
+    function totalStreamingRate() external view returns (uint256);
 }
 
 contract QuadGovernor {
@@ -13,7 +14,7 @@ contract QuadGovernor {
 
     address public vault;
     uint256 public constant SCALE = 1e18;
-    uint256 public constant BUFFER_PERCENT = 5;
+    uint256 public totalMatchingRate; 
 
     mapping(address => mapping(address => uint256)) public userFlows;
     mapping(address => uint256) public projectSqrtSum;
@@ -24,57 +25,56 @@ contract QuadGovernor {
     uint256 public totalWeight;
 
     event ContributionUpdated(address indexed project, address indexed user, uint256 flowRate);
+    event ProjectAdded(address indexed project);
 
     function setVault(address _vault) external {
         require(vault == address(0), "Vault already set");
         vault = _vault;
     }
 
+    function setTotalMatchingRate(uint256 _rate) external {
+        totalMatchingRate = _rate;
+        _rebalanceAll();
+    }
+
     function addProject(address _project) external {
-        require(!isProject[_project], "Project exists");
+        require(!isProject[_project], "Already project");
         isProject[_project] = true;
         projects.push(_project);
+        emit ProjectAdded(_project);
     }
 
-    function contribute(address project, uint256 flowRate) external {
-        require(isProject[project], "Not a project");
+    function updateContribution(address _project, uint256 _newFlowRate) external {
+        require(isProject[_project], "Not a project");
         
-        uint256 oldFlow = userFlows[project][msg.sender];
+        uint256 oldFlow = userFlows[_project][msg.sender];
+        userFlows[_project][msg.sender] = _newFlowRate;
+
         uint256 oldSqrt = QFMath.sqrtScaled(oldFlow);
-        uint256 newSqrt = QFMath.sqrtScaled(flowRate);
+        uint256 newSqrt = QFMath.sqrtScaled(_newFlowRate);
 
-        // Update project sqrt sum
-        projectSqrtSum[project] = (projectSqrtSum[project] + newSqrt) - oldSqrt;
-        
-        // Update project weight: (sum of sqrts)^2 / SCALE
-        uint256 newWeight = (projectSqrtSum[project] * projectSqrtSum[project]) / SCALE;
-        
-        totalWeight = (totalWeight + newWeight) - projectWeights[project];
-        projectWeights[project] = newWeight;
-        userFlows[project][msg.sender] = flowRate;
+        uint256 currentSqrtSum = projectSqrtSum[_project];
+        // Update sqrt sum: subtract old, add new
+        projectSqrtSum[_project] = (currentSqrtSum + newSqrt) - oldSqrt;
 
-        _rebalanceStreams();
+        // Update project weight: (sum of sqrts)^2
+        uint256 oldWeight = projectWeights[_project];
+        uint256 newWeight = (projectSqrtSum[_project] * projectSqrtSum[_project]) / SCALE;
+        projectWeights[_project] = newWeight;
 
-        emit ContributionUpdated(project, msg.sender, flowRate);
+        totalWeight = (totalWeight + newWeight) - oldWeight;
+
+        _rebalanceAll();
+        emit ContributionUpdated(_project, msg.sender, _newFlowRate);
     }
 
-    function _rebalanceStreams() internal {
-        if (totalWeight == 0) return;
-
-        // Calculate available matching pool rate
-        // We use a 5% buffer: matchingRate = (vaultBalance * 95) / (100 * secondsInMonth)
-        // For MVP simplicity, we assume a target monthly distribution
-        address token = IStreamVault(vault).token();
-        uint256 balance = QFMath.SCALE * 1000; // Mock or real balance check
-        // In a real scenario, we'd fetch balance from token.balanceOf(vault)
-        
-        uint256 totalAvailableRate = (balance * (100 - BUFFER_PERCENT)) / (100 * 30 days);
+    function _rebalanceAll() internal {
+        if (totalWeight == 0 || vault == address(0)) return;
 
         for (uint256 i = 0; i < projects.length; i++) {
-            address p = projects[i];
-            uint256 pWeight = projectWeights[p];
-            uint256 pRate = (totalAvailableRate * pWeight) / totalWeight;
-            IStreamVault(vault).updateStream(p, pRate);
+            address project = projects[i];
+            uint256 share = (projectWeights[project] * totalMatchingRate) / totalWeight;
+            IStreamVault(vault).updateStream(project, share);
         }
     }
 
