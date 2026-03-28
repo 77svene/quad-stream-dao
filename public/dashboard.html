@@ -14,7 +14,7 @@
                 QuadStream
             </h1>
             <div id="wallet-status" class="flex items-center gap-4">
-                <button onclick="init()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-medium transition-all">
+                <button onclick="init()" id="connectBtn" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-medium transition-all">
                     Connect Wallet
                 </button>
             </div>
@@ -22,64 +22,83 @@
     </nav>
 
     <main class="max-w-6xl mx-auto p-6">
-        <header class="mb-12 text-center">
-            <h2 class="text-4xl font-extrabold mb-4">Quadratic Funding Streams</h2>
-            <p class="text-slate-400 max-w-2xl mx-auto">
-                Real-time matching pool distribution based on the square of the sum of square roots of individual contributor stream magnitudes.
-            </p>
+        <header class="mb-12">
+            <h2 class="text-4xl font-extrabold mb-2">Matching Pool</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                    <p class="text-slate-400 text-sm uppercase tracking-wider">Total Matching Rate</p>
+                    <p id="totalMatchingRate" class="text-3xl font-mono mt-1">0.00 <span class="text-sm text-slate-500">DAI/sec</span></p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                    <p class="text-slate-400 text-sm uppercase tracking-wider">Active Projects</p>
+                    <p id="projectCount" class="text-3xl font-mono mt-1">0</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                    <p class="text-slate-400 text-sm uppercase tracking-wider">Network Weight</p>
+                    <p id="totalWeight" class="text-3xl font-mono mt-1">0.00</p>
+                </div>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-2">Total Matching Rate</h3>
-                <div id="total-matching-rate" class="text-3xl font-mono font-bold text-cyan-400">0.00 /sec</div>
+        <section>
+            <div class="flex justify-between items-end mb-6">
+                <h3 class="text-2xl font-bold">Project Leaderboard</h3>
+                <button onclick="refreshData()" class="text-sm text-blue-400 hover:text-blue-300">Refresh Data</button>
             </div>
-            <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-2">Total Weight</h3>
-                <div id="total-weight" class="text-3xl font-mono font-bold text-purple-400">0.00</div>
+            
+            <div id="project-list" class="grid gap-4">
+                <!-- Projects injected here -->
+                <div class="animate-pulse bg-slate-800 h-32 rounded-2xl"></div>
+                <div class="animate-pulse bg-slate-800 h-32 rounded-2xl"></div>
             </div>
-            <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                <h3 class="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-2">Active Projects</h3>
-                <div id="project-count" class="text-3xl font-mono font-bold text-emerald-400">0</div>
-            </div>
-        </div>
-
-        <div class="bg-slate-800/30 rounded-3xl border border-slate-700 overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-800/80">
-                        <th class="p-4 font-semibold text-slate-300">Project Address</th>
-                        <th class="p-4 font-semibold text-slate-300 text-right">QF Weight</th>
-                        <th class="p-4 font-semibold text-slate-300 text-right">Matching Rate</th>
-                        <th class="p-4 font-semibold text-slate-300 text-right">Your Stream</th>
-                        <th class="p-4 font-semibold text-slate-300 text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="project-list">
-                    <!-- Projects injected here -->
-                    <tr>
-                        <td colspan="5" class="p-12 text-center text-slate-500 italic">
-                            Connect wallet to load projects...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        </section>
     </main>
 
-    <footer class="mt-20 p-8 border-t border-slate-800 text-center text-slate-500 text-sm">
-        QuadStream Protocol &copy; 2026 - Built for Hackonomics DAO Tooling Track
-    </footer>
+    <!-- Modal for contributing -->
+    <div id="streamModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 p-8 rounded-3xl max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4">Start Stream</h3>
+            <p class="text-slate-400 mb-6">Set your contribution rate. This will be streamed continuously until you stop it.</p>
+            <input type="number" id="streamRateInput" step="0.000001" placeholder="0.01 DAI/sec" 
+                   class="w-full bg-slate-900 border border-slate-600 rounded-xl p-4 mb-6 text-xl focus:outline-none focus:border-blue-500">
+            <div class="flex gap-4">
+                <button onclick="closeModal()" class="flex-1 px-6 py-3 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors">Cancel</button>
+                <button id="confirmStreamBtn" class="flex-1 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
     <script>
-        // UI Helper to format BigInts
-        function formatUnits(val) {
-            return (Number(val) / 1e18).toFixed(6);
+        let activeProject = null;
+
+        function openStreamModal(projectAddr) {
+            activeProject = projectAddr;
+            document.getElementById('streamModal').classList.remove('hidden');
         }
 
-        // Override the refreshData UI update logic from app.js if needed or ensure app.js handles it
-        // For this MVP, app.js will handle the DOM manipulation.
+        function closeModal() {
+            document.getElementById('streamModal').classList.add('hidden');
+            activeProject = null;
+        }
+
+        document.getElementById('confirmStreamBtn').onclick = async () => {
+            const rate = document.getElementById('streamRateInput').value;
+            if (!rate || !activeProject) return;
+            
+            try {
+                const tx = await updateContribution(activeProject, rate);
+                console.log("TX Sent:", tx.hash);
+                closeModal();
+                await tx.wait();
+                refreshData();
+            } catch (err) {
+                alert("Transaction failed: " + err.message);
+            }
+        };
+
+        // Auto-refresh every 10 seconds
+        setInterval(refreshData, 10000);
     </script>
 </body>
 </html>
