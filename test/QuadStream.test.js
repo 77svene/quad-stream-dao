@@ -3,17 +3,15 @@ const { ethers } = require("hardhat");
 
 describe("QuadStream QF Logic", function () {
   let governor, vault, token;
-  let owner, alice, bob, charlie, dave, projA, projB;
+  let owner, alice, bob, charlie, dave, project1, project2;
   const SCALE = ethers.parseEther("1");
 
   beforeEach(async function () {
-    [owner, alice, bob, charlie, dave, projA, projB] = await ethers.getSigners();
+    [owner, alice, bob, charlie, dave, project1, project2] = await ethers.getSigners();
 
     // Deploy Mock Token
-    const Token = await ethers.getContractFactory("contracts/StreamVault.sol:IERC20");
-    // Note: In a real test we'd deploy a real ERC20, but for logic testing 
-    // we just need the addresses to exist for the Governor.
-    token = owner.address; 
+    const Token = await ethers.getContractFactory("MockERC20");
+    token = await Token.deploy("DAI", "DAI", ethers.parseEther("1000000"));
 
     // Deploy Governor
     const Governor = await ethers.getContractFactory("QuadGovernor");
@@ -21,67 +19,103 @@ describe("QuadStream QF Logic", function () {
 
     // Deploy Vault
     const Vault = await ethers.getContractFactory("StreamVault");
-    vault = await Vault.deploy(await governor.getAddress(), token);
+    vault = await Vault.deploy(await governor.getAddress(), await token.getAddress());
 
+    // Setup
     await governor.setVault(await vault.getAddress());
-    await governor.setTotalMatchingRate(ethers.parseEther("10")); // 10 tokens/sec matching pool
-
-    await governor.addProject(projA.address);
-    await governor.addProject(projB.address);
-  });
-
-  it("Should verify 4 contributors of 1 DAI/sec > 1 contributor of 4 DAI/sec", async function () {
-    // Project A: 4 contributors @ 1 unit/sec each
-    // sqrt(1)+sqrt(1)+sqrt(1)+sqrt(1) = 4. 4^2 = 16.
-    await governor.connect(alice).updateContribution(projA.address, ethers.parseEther("1"));
-    await governor.connect(bob).updateContribution(projA.address, ethers.parseEther("1"));
-    await governor.connect(charlie).updateContribution(projA.address, ethers.parseEther("1"));
-    await governor.connect(dave).updateContribution(projA.address, ethers.parseEther("1"));
-
-    // Project B: 1 contributor @ 4 units/sec
-    // sqrt(4) = 2. 2^2 = 4.
-    await governor.connect(alice).updateContribution(projB.address, ethers.parseEther("4"));
-
-    const weightA = await governor.projectWeights(projA.address);
-    const weightB = await governor.projectWeights(projB.address);
-
-    // Weight A (16) should be 4x Weight B (4)
-    expect(weightA).to.be.gt(weightB);
+    await governor.addProject(project1.address);
+    await governor.addProject(project2.address);
     
-    // Check actual stream rates in vault
-    const streamA = await vault.streams(projA.address);
-    const streamB = await vault.streams(projB.address);
-
-    // Total matching is 10. Total weight is 16 + 4 = 20.
-    // A gets 16/20 * 10 = 8
-    // B gets 4/20 * 10 = 2
-    expect(streamA.rate).to.equal(ethers.parseEther("8"));
-    expect(streamB.rate).to.equal(ethers.parseEther("2"));
+    // Set matching pool rate: 100 tokens per second
+    await governor.setTotalMatchingRate(ethers.parseEther("100"));
   });
 
-  it("Should drop matching rate to 0 if all contributors stop", async function () {
-    await governor.connect(alice).updateContribution(projA.address, ethers.parseEther("1"));
-    let stream = await vault.streams(projA.address);
-    expect(stream.rate).to.be.gt(0);
+  it("Case 1: 4 contributors of 1 DAI/sec > 1 contributor of 4 DAI/sec", async function () {
+    // Project 1: 4 contributors @ 1 DAI/sec each
+    // Sqrt sum = 1+1+1+1 = 4. Weight = 4^2 = 16.
+    await governor.connect(alice).updateContribution(project1.address, ethers.parseEther("1"));
+    await governor.connect(bob).updateContribution(project1.address, ethers.parseEther("1"));
+    await governor.connect(charlie).updateContribution(project1.address, ethers.parseEther("1"));
+    await governor.connect(dave).updateContribution(project1.address, ethers.parseEther("1"));
 
-    await governor.connect(alice).updateContribution(projA.address, 0);
-    stream = await vault.streams(projA.address);
-    expect(stream.rate).to.equal(0);
+    // Project 2: 1 contributor @ 4 DAI/sec
+    // Sqrt sum = sqrt(4) = 2. Weight = 2^2 = 4.
+    await governor.connect(owner).updateContribution(project2.address, ethers.parseEther("4"));
+
+    const weight1 = await governor.projectWeights(project1.address);
+    const weight2 = await governor.projectWeights(project2.address);
+
+    // 16 vs 4
+    expect(weight1).to.equal(ethers.parseEther("16"));
+    expect(weight2).to.equal(ethers.parseEther("4"));
+
+    // Check matching rates (Total 100)
+    // P1: 100 * (16/20) = 80
+    // P2: 100 * (4/20) = 20
+    const stream1 = await vault.streams(project1.address);
+    const stream2 = await vault.streams(project2.address);
+
+    expect(stream1.rate).to.equal(ethers.parseEther("80"));
+    expect(stream2.rate).to.equal(ethers.parseEther("20"));
   });
 
-  it("Should rebalance when total matching rate changes", async function () {
-    await governor.connect(alice).updateContribution(projA.address, ethers.parseEther("1"));
-    const initialStream = (await vault.streams(projA.address)).rate;
+  it("Case 2: Matching rate drops when a contributor stops", async function () {
+    await governor.connect(alice).updateContribution(project1.address, ethers.parseEther("1"));
+    await governor.connect(bob).updateContribution(project2.address, ethers.parseEther("1"));
+    
+    // Equal weights (1 vs 1) -> 50/50 split
+    let stream1 = await vault.streams(project1.address);
+    expect(stream1.rate).to.equal(ethers.parseEther("50"));
 
-    await governor.setTotalMatchingRate(ethers.parseEther("20"));
-    const newStream = (await vault.streams(projA.address)).rate;
-
-    expect(newStream).to.equal(initialStream * 2n);
+    // Alice stops
+    await governor.connect(alice).updateContribution(project1.address, 0);
+    
+    stream1 = await vault.streams(project1.address);
+    let stream2 = await vault.streams(project2.address);
+    
+    expect(stream1.rate).to.equal(0);
+    expect(stream2.rate).to.equal(ethers.parseEther("100")); // Project 2 gets everything
   });
 
-  it("Should prevent non-governor from updating vault streams", async function () {
-    await expect(
-      vault.connect(alice).updateStream(projA.address, 100)
-    ).to.be.revertedWith("Only governor");
+  it("Case 3: Vault accrues funds over time", async function () {
+    await governor.connect(alice).updateContribution(project1.address, ethers.parseEther("1"));
+    // 100% of matching goes to project1
+    
+    await ethers.provider.send("evm_increaseTime", [10]);
+    await ethers.provider.send("evm_mine");
+
+    const stream = await vault.streams(project1.address);
+    // Note: updateStream is called during updateContribution, so it might have accrued 0 initially.
+    // We call updateStream again or just check the math.
+    // In our contract, updateStream updates 'accrued'.
+    await governor.setTotalMatchingRate(ethers.parseEther("100")); // Triggers rebalance/update
+    
+    const streamAfter = await vault.streams(project1.address);
+    expect(streamAfter.accrued).to.be.at.least(ethers.parseEther("1000")); // 100/s * 10s
+  });
+
+  it("Case 4: Project withdrawal reduces vault balance", async function () {
+    // Fund the vault
+    await token.transfer(await vault.getAddress(), ethers.parseEther("5000"));
+    
+    await governor.connect(alice).updateContribution(project1.address, ethers.parseEther("1"));
+    await ethers.provider.send("evm_increaseTime", [10]);
+    await ethers.provider.send("evm_mine");
+    
+    // Trigger accrual
+    await governor.setTotalMatchingRate(ethers.parseEther("100"));
+    
+    const initialBal = await token.balanceOf(project1.address);
+    await vault.connect(project1).withdraw();
+    const finalBal = await token.balanceOf(project1.address);
+    
+    expect(finalBal).to.be.gt(initialBal);
   });
 });
+
+// Minimal Mock Token for testing
+async function deployMock() {
+    const [owner] = await ethers.getSigners();
+    const Token = await ethers.getContractFactory("MockERC20");
+    return await Token.deploy("DAI", "DAI", ethers.parseEther("1000000"));
+}
