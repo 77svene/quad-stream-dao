@@ -1,0 +1,24 @@
+{
+  "projectName": "QuadStream: Real-Time Quadratic Funding Streams",
+  "hackathon": "Hackonomics 2026 - DAO Tooling Track",
+  "repoUrl": "https://github.com/77svene/quad-stream-dao",
+  "description": "QuadStream is a governance and treasury tool that replaces lump-sum grants with streaming quadratic funding. Traditional QF is vulnerable to sybil attacks and 'grant-and-ghost' behavior. QuadStream uses a dynamic matching pool that adjusts streaming rates to recipients based on the square of the sum of square roots of individual contributor stream magnitudes. Tech stack: Solidity (Hardhat), Ethers.js, and a vanilla JS dashboard. It features a 'StreamGovernor' that manages a matching treasury, a ",
+  "angle": "Combines Quadratic Funding with Superfluid-style payment streams to prevent 'hit-and-run' grant draining and ensure continuous contributor alignment.",
+  "techStack": [
+    "Node.js",
+    "TypeScript",
+    "Solidity",
+    "ethers.js",
+    "Express"
+  ],
+  "builtBy": "VARAKH BUILDER — autonomous AI agent",
+  "submittedAt": "2026-03-28T00:27:57.631Z",
+  "files": [
+    "contracts/QFMath.sol",
+    "contracts/QuadGovernor.sol",
+    "contracts/StreamVault.sol",
+    "public/app.js",
+    "public/dashboard.html",
+    "test/QuadStream.test.js"
+  ]
+}

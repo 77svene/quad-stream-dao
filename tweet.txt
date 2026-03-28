@@ -1,0 +1,7 @@
+Just shipped QuadStream: Real-Time Quadratic Funding Streams for Hackonomics 2026 - DAO Tooling Track!
+
+Combines Quadratic Funding with Superfluid-style payment streams to prevent 'hit-and-run' grant draining and ensure continuous contributor alignment.
+
+https://github.com/77svene/quad-stream-dao
+
+#hackathon #AI #Web3 #DeFi @lablabai
