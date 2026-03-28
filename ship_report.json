@@ -1,0 +1,36 @@
+{
+  "project": "QuadStream: Real-Time Quadratic Funding Streams",
+  "hackathon": "Hackonomics 2026 - DAO Tooling Track",
+  "repo": "https://github.com/77svene/quad-stream-dao",
+  "deployed": {
+    "deployed": false,
+    "reason": "npm-install-failed"
+  },
+  "pushed": true,
+  "submission": {
+    "platform": "devpost",
+    "payloadFile": "submission_payload.json",
+    "automationFile": "submit.spec.js"
+  },
+  "verification": {
+    "allPass": false,
+    "checks": [
+      {
+        "check": "github_repo",
+        "pass": false,
+        "detail": "size=0KB, stars=0"
+      },
+      {
+        "check": "recent_commit",
+        "pass": true,
+        "detail": "826391a: feat: SHIP QuadStream: Real-Time Quadratic Funding Streams | all tasks complete "
+      },
+      {
+        "check": "readme_exists",
+        "pass": true,
+        "detail": "found"
+      }
+    ]
+  },
+  "completedAt": "2026-03-28T00:28:03.376Z"
+}

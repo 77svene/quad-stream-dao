@@ -1,0 +1,40 @@
+{
+  "platform": "devpost",
+  "projectName": "QuadStream: Real-Time Quadratic Funding Streams",
+  "tagline": "Combines Quadratic Funding with Superfluid-style payment streams to prevent 'hit-and-run' grant draining and ensure cont",
+  "description": "QuadStream is a governance and treasury tool that replaces lump-sum grants with streaming quadratic funding. Traditional QF is vulnerable to sybil attacks and 'grant-and-ghost' behavior. QuadStream uses a dynamic matching pool that adjusts streaming rates to recipients based on the square of the sum of square roots of individual contributor stream magnitudes. Tech stack: Solidity (Hardhat), Ethers.js, and a vanilla JS dashboard. It features a 'StreamGovernor' that manages a matching treasury, a 'ContributionVault' for individual backers, and a 'FlowCalculator' library to handle the non-linear math of quadratic streaming without hitting gas limits. The system ensures that if a contributor stops their stream, the matching multiplier for that project drops instantly across the network.",
+  "repoUrl": "https://github.com/77svene/quad-stream-dao",
+  "demoUrl": "https://github.com/77svene/quad-stream-dao#demo",
+  "deployedContract": null,
+  "techStack": [
+    "Node.js",
+    "TypeScript",
+    "Solidity",
+    "ethers.js",
+    "Express"
+  ],
+  "teamName": "VARAKH",
+  "teamMembers": [
+    "VARAKH BUILDER (AI Agent)"
+  ],
+  "devpost": {
+    "url": "https://devpost.com/software/new",
+    "fields": {
+      "software[title]": "QuadStream: Real-Time Quadratic Funding Streams",
+      "software[tagline]": "Combines Quadratic Funding with Superfluid-style payment streams to prevent 'hit-and-run' grant draining and ensure cont",
+      "software[about]": "QuadStream is a governance and treasury tool that replaces lump-sum grants with streaming quadratic funding. Traditional QF is vulnerable to sybil attacks and 'grant-and-ghost' behavior. QuadStream uses a dynamic matching pool that adjusts streaming rates to recipients based on the square of the sum of square roots of individual contributor stream magnitudes. Tech stack: Solidity (Hardhat), Ethers.js, and a vanilla JS dashboard. It features a 'StreamGovernor' that manages a matching treasury, a 'ContributionVault' for individual backers, and a 'FlowCalculator' library to handle the non-linear math of quadratic streaming without hitting gas limits. The system ensures that if a contributor stops their stream, the matching multiplier for that project drops instantly across the network.",
+      "software[built_with]": "Node.js, TypeScript, Solidity, ethers.js, Express",
+      "software[links_attributes][0][url]": "https://github.com/77svene/quad-stream-dao"
+    }
+  },
+  "lablab": {
+    "url": "https://lablab.ai/ai-hackathons",
+    "fields": {
+      "title": "QuadStream: Real-Time Quadratic Funding Streams",
+      "description": "QuadStream is a governance and treasury tool that replaces lump-sum grants with streaming quadratic funding. Traditional QF is vulnerable to sybil attacks and 'grant-and-ghost' behavior. QuadStream uses a dynamic matching pool that adjusts streaming rates to recipients based on the square of the sum of square roots of individual contributor stream magnitudes. Tech stack: Solidity (Hardhat), Ethers.js, and a vanilla JS dashboard. It features a 'StreamGovernor' that manages a matching treasury, a 'ContributionVault' for individual backers, and a 'FlowCalculator' library to handle the non-linear math of quadratic streaming without hitting gas limits. The system ensures that if a contributor stops their stream, the matching multiplier for that project drops instantly across the network.",
+      "github_url": "https://github.com/77svene/quad-stream-dao",
+      "demo_video_url": "",
+      "tech_stack": "Node.js, TypeScript, Solidity, ethers.js"
+    }
+  }
+}

@@ -1,134 +1,144 @@
 # 🚀 QuadStream: Real-Time Quadratic Funding Streams
 
-> **One-line Pitch:** Streaming Quadratic Funding that punishes dropouts, prevents hit-and-run grants, and ensures continuous contributor alignment through dynamic matching pools.
+> **One-Line Pitch:** Streaming Quadratic Funding that punishes drift and rewards consistency by dynamically adjusting matching rates in real-time.
 
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.20-blue.svg)](https://soliditylang.org/)
-[![Hardhat](https://img.shields.io/badge/Hardhat-2.19.0-ff69b4.svg)](https://hardhat.org/)
-[![Ethers.js](https://img.shields.io/badge/Ethers.js-6.0.0-627EEA.svg)](https://docs.ethers.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Hackonomics 2026](https://img.shields.io/badge/Hackathon-Hackonomics%202026-000000.svg)](https://hackonomics.io)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.20-blue.svg)](https://soliditylang.org/)
+[![Hardhat](https://img.shields.io/badge/Hardhat-2.19.0-orange.svg)](https://hardhat.org/)
+[![Ethers.js](https://img.shields.io/badge/Ethers.js-v6.9.0-green.svg)](https://docs.ethers.org/)
+[![Hackonomics 2026](https://img.shields.io/badge/Hackathon-Hackonomics%202026-red.svg)](https://hackonomics.io)
 
 ## 📖 Overview
 
-**QuadStream** is a next-generation governance and treasury tool designed for DAOs. It replaces traditional lump-sum Quadratic Funding (QF) rounds with **Superfluid-style payment streams**. By integrating real-time streaming with the quadratic matching formula, QuadStream eliminates the "grant-and-ghost" behavior common in traditional QF, ensuring that funding is directly proportional to sustained community support rather than one-time sybil attacks.
+**QuadStream** is a governance and treasury tool designed for DAOs that replaces inefficient lump-sum grants with **streaming quadratic funding**. By integrating Superfluid-style payment streams with Quadratic Funding (QF) logic, QuadStream ensures continuous contributor alignment and prevents 'hit-and-run' grant draining.
 
-## 🚨 The Problem
+Built for the **Hackonomics 2026 - DAO Tooling Track**, this project solves the critical issue of sybil attacks and short-term exploitation in traditional QF rounds.
 
-Traditional Quadratic Funding mechanisms suffer from critical vulnerabilities:
-1.  **Hit-and-Run Grants:** Contributors donate a large amount at the start of a round to inflate the matching pool, then withdraw immediately, leaving the project with a lump sum that doesn't reflect ongoing support.
-2.  **Sybil Attacks:** One-time donations are easier to farm with multiple wallets than sustained streaming commitments.
-3.  **Lack of Alignment:** Once a grant is distributed, there is no mechanism to reduce funding if the community loses interest or if the project underperforms.
-4.  **Gas Inefficiency:** Calculating complex QF math on-chain for every transaction often hits gas limits or requires expensive off-chain indexing.
+## 🛑 The Problem
+
+Traditional Quadratic Funding mechanisms suffer from three critical vulnerabilities:
+
+1.  **Grant-and-Ghost Behavior:** Contributors fund a project once to maximize matching, then withdraw immediately, leaving the project underfunded for the long term.
+2.  **Sybil Vulnerability:** Lump-sum contributions allow attackers to pool funds and manipulate the $\sum \sqrt{c_i}$ calculation without genuine community support.
+3.  **Liquidity Mismatch:** Projects receive a lump sum that may not match their burn rate, leading to waste or insolvency.
 
 ## ✅ The Solution
 
-QuadStream introduces **Dynamic Streaming Quadratic Funding**:
-*   **Continuous Alignment:** Funding flows continuously. If a contributor stops their stream, the matching multiplier for that project drops instantly.
-*   **Sybil Resistance:** Sustained streaming is harder to farm than one-off transactions, requiring genuine long-term commitment.
-*   **Gas-Optimized Math:** A dedicated `FlowCalculator` library handles the non-linear $Q = (\sum \sqrt{c_i})^2$ logic efficiently on-chain.
-*   **Instant Reactivity:** The `StreamGovernor` adjusts streaming rates in real-time based on the aggregate square root of individual stream magnitudes.
+QuadStream introduces **Dynamic Streaming Matching**. Instead of a one-time pool distribution, the matching treasury flows continuously.
+
+*   **Real-Time Adjustment:** The matching rate for a recipient is calculated based on the square of the sum of square roots of individual contributor stream magnitudes ($ (\sum \sqrt{c_i})^2 $).
+*   **Instant Reaction:** If a contributor stops their stream, the matching multiplier for that project drops instantly across the network.
+*   **Gas Optimization:** A dedicated `FlowCalculator` library handles the non-linear math efficiently to prevent gas limit hits during high-frequency updates.
 
 ## 🏗️ Architecture
 
-```mermaid
-graph TD
-    A[Contributors] -->|Stream ETH/USDC| B(ContributionVault)
-    B -->|Aggregate Data| C{FlowCalculator}
-    C -->|QF Math: (Σ√c)²| D[StreamGovernor]
-    D -->|Adjust Rates| E[Recipients]
-    F[Matching Treasury] -->|Match Funds| D
-    D -->|Stream Funds| E
-    G[Dashboard] -->|Read State| B
-    G -->|Write Tx| D
+```text
++----------------+       +---------------------+       +------------------+
+|   Backers      |       |   ContributionVault |       |   Recipients     |
+| (Streamers)    |<----->| (Individual Funds)  |<----->| (Projects)       |
++-------+--------+       +----------+----------+       +--------+---------+
+        |                           |                           |
+        | 1. Initiate Stream        | 2. Aggregate Magnitude    | 3. Receive Flow
+        v                           v                           v
++-------+---------------------------+---------------------------+-------+
+|                         StreamGovernor                          |
+|  - Manages Matching Treasury                                    |
+|  - Enforces Flow Rules                                          |
++-------+---------------------------+---------------------------+-------+
+        |                           |
+        | 4. Calculate Rate         | 5. Update State
+        v                           v
++-------+---------------------------+---------------------------+-------+
+|                        FlowCalculator Library                       |
+|  - Computes: (Sum(Sqrt(Contributions)))^2                           |
+|  - Optimized for Gas Efficiency                                     |
++---------------------------------------------------------------------+
 ```
 
-### Core Components
+## 🛠️ Tech Stack
 
-| Component | File | Description |
-| :--- | :--- | :--- |
-| **FlowCalculator** | `contracts/QFMath.sol` | Handles the quadratic math $(\sum \sqrt{c_i})^2$ with gas optimization. |
-| **StreamGovernor** | `contracts/QuadGovernor.sol` | Manages the matching treasury and adjusts stream rates dynamically. |
-| **ContributionVault** | `contracts/StreamVault.sol` | Holds individual backer funds and tracks stream durations. |
-| **Frontend** | `public/app.js` | Vanilla JS dashboard for monitoring streams and initiating contributions. |
+*   **Smart Contracts:** Solidity 0.8.20
+*   **Development Framework:** Hardhat
+*   **Frontend:** Vanilla JavaScript + HTML/CSS
+*   **Blockchain Interaction:** Ethers.js v6
+*   **Testing:** Mocha/Chai
 
-## 🛠️ Setup Instructions
+## 🚀 Setup Instructions
 
-### Prerequisites
-*   Node.js v18+
-*   Hardhat
-*   MetaMask or compatible wallet
+Follow these steps to run QuadStream locally.
 
-### Installation
+### 1. Clone the Repository
+```bash
+git clone https://github.com/77svene/quad-stream-dao
+cd quad-stream-dao
+```
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/77svene/quad-stream-dao
-    cd quad-stream-dao
-    ```
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+### 3. Configure Environment
+Create a `.env` file in the root directory with the following variables:
 
-3.  **Configure Environment**
-    Create a `.env` file in the root directory:
-    ```env
-    RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
-    PRIVATE_KEY=YOUR_WALLET_PRIVATE_KEY
-    CONTRACT_ADDRESS=0x...
-    ```
+```env
+# Network Configuration
+RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+PRIVATE_KEY=YOUR_WALLET_PRIVATE_KEY
+DEPLOYER_ADDRESS=0x...
 
-4.  **Deploy Contracts**
-    ```bash
-    npx hardhat run scripts/deploy.js --network sepolia
-    ```
+# Dashboard Configuration
+PORT=3000
+```
 
-5.  **Run the Dashboard**
-    ```bash
-    npm start
-    ```
-    *The dashboard will open at `http://localhost:3000`.*
+### 4. Deploy Contracts
+Compile and deploy the contracts to your local Hardhat network or testnet:
+```bash
+npx hardhat compile
+npx hardhat run scripts/deploy.js --network localhost
+```
 
-## 📡 API & Contract Interaction
+### 5. Start the Dashboard
+Launch the vanilla JS dashboard to interact with the contracts:
+```bash
+npm start
+```
+*The dashboard will be available at `http://localhost:3000`.*
 
-The system exposes contract methods as the primary API for the frontend.
+## 📡 API & Contract Methods
+
+The dashboard interacts with the smart contracts via the following exposed methods:
 
 | Method | Type | Description |
 | :--- | :--- | :--- |
-| `startStream(projectId, rate)` | Write | Initiates a new contribution stream to a specific project. |
-| `stopStream(projectId)` | Write | Halts the stream, triggering an immediate recalculation of the match rate. |
-| `getStreamRate(projectId)` | Read | Returns the current calculated quadratic matching rate for a project. |
-| `withdrawMatching(projectId)` | Write | Allows the recipient to claim accumulated matching funds. |
-| `getTotalContributors(projectId)` | Read | Returns the count of unique active streamers for a project. |
+| `startStream(projectId, amount)` | Write | Initiates a new contribution stream to a project. |
+| `stopStream(projectId)` | Write | Halts the contributor's stream, triggering recalculation. |
+| `getMatchingRate(projectId)` | Read | Returns the current dynamic matching multiplier. |
+| `withdrawMatching(projectId)` | Write | Allows recipient to claim accumulated matching funds. |
+| `getStreamStatus(user, projectId)` | Read | Returns current stream rate and total contributed. |
 
-## 📸 Demo
+## 📸 Demo Screenshots
 
 ### Dashboard Overview
-![QuadStream Dashboard](https://via.placeholder.com/800x400/2563eb/ffffff?text=QuadStream+Dashboard+Live+View)
+![Dashboard Overview](https://via.placeholder.com/800x400/2563eb/ffffff?text=QuadStream+Dashboard+Overview)
 
-### Stream Visualization
-![Stream Graph](https://via.placeholder.com/800x400/16a34a/ffffff?text=Real-Time+Flow+Visualization)
+### Stream Configuration
+![Stream Config](https://via.placeholder.com/800x400/16a34a/ffffff?text=Stream+Configuration+Modal)
 
-## 🧪 Testing
-
-Run the full test suite to verify QF math and stream logic:
-
-```bash
-npx hardhat test
-```
+### Real-Time Matching Graph
+![Matching Graph](https://via.placeholder.com/800x400/dc2626/ffffff?text=Real-Time+Matching+Graph)
 
 ## 👥 Team
 
 **Built by VARAKH BUILDER — autonomous AI agent**
 
-*   **Architecture & Logic:** VARAKH BUILDER
-*   **Smart Contract Security:** VARAKH BUILDER
-*   **Frontend Integration:** VARAKH BUILDER
+*   **Core Logic:** Solidity & FlowCalculator
+*   **Frontend:** Vanilla JS Dashboard
+*   **Strategy:** Hackonomics 2026 DAO Tooling Track
 
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
-*Hackonomics 2026 - DAO Tooling Track Winner Candidate*
+*QuadStream © 2026. All rights reserved.*
